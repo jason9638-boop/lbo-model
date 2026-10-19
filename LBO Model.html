@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBO 報酬試算器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<style>
+  :root{
+    --navy:#1B2A4A; --navy2:#2C3E66; --navy-soft:#E6EAF2;
+    --gold:#C9A84C; --gold-dark:#A88A34; --gold-soft:#F3EAD0;
+    --bg:#F6F4EE; --card:#FFFFFF; --text:#1F2633; --muted:#6B7280; --line:#E3DFD3;
+    --red:#B04A3A; --red-soft:#F6E1DC; --green:#2F7D5B; --green-soft:#DFF0E7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-size:15px;line-height:1.55}
+  header{background:var(--navy);color:#fff;padding:28px 32px 22px;border-bottom:4px solid var(--gold)}
+  header h1{margin:0;font-family:"Noto Serif TC",serif;font-size:28px;letter-spacing:1px}
+  header h1 span{color:var(--gold)}
+  header p{margin:6px 0 0;color:#C9D1E3;font-size:14px}
+  .wrap{max-width:1360px;margin:0 auto;padding:24px;display:grid;grid-template-columns:330px 1fr;gap:24px}
+  aside{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;align-self:start;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+  aside h2{margin:0 0 12px;font-size:17px;color:var(--navy)}
+  .scen{display:flex;gap:6px;margin-bottom:6px}
+  .scen button,.reset{flex:1;border:1px solid var(--navy);background:#fff;color:var(--navy);padding:7px 0;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px;transition:.15s}
+  .scen button:hover,.reset:hover{background:var(--navy);color:#fff}
+  .scen button.active{background:var(--gold);border-color:var(--gold);color:var(--navy);font-weight:700}
+  .scen-note{font-size:12px;color:var(--muted);margin-bottom:8px}
+  h3.grp{font-size:13px;color:var(--gold-dark);margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line);letter-spacing:1px}
+  .field{margin-bottom:12px}
+  .frow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .frow label{font-size:14px;font-weight:500}
+  .numwrap{display:flex;align-items:center;gap:4px}
+  .numwrap input{width:74px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;text-align:right;color:var(--navy);font-weight:700}
+  .unit{font-size:12px;color:var(--muted);min-width:34px}
+  input[type=range]{width:100%;accent-color:var(--gold);margin:4px 0 0}
+  .hint{font-size:12px;color:var(--muted)}
+  .reset{width:100%;margin-top:10px}
+  main{display:flex;flex-direction:column;gap:20px;min-width:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .card h2{margin:0 0 4px;font-size:18px;color:var(--navy);font-family:"Noto Serif TC",serif}
+  .card .sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:10px;padding:14px 16px}
+  .kpi.hl{border-left-color:var(--gold);background:linear-gradient(135deg,#fff 60%,var(--gold-soft))}
+  .kpi .k{font-size:13px;color:var(--muted)}
+  .kpi .v{font-size:26px;font-weight:700;color:var(--navy);margin:2px 0}
+  .kpi .s{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:700}
+  .badge.ok{background:var(--green-soft);color:var(--green)}
+  .badge.no{background:var(--red-soft);color:var(--red)}
+  .score{display:grid;grid-template-columns:220px 1fr;gap:24px}
+  .gradebox{background:var(--navy);color:#fff;border-radius:12px;padding:20px;text-align:center;display:flex;flex-direction:column;justify-content:center}
+  .grade{font-family:"Noto Serif TC",serif;font-size:72px;line-height:1;color:var(--gold);font-weight:700}
+  .pts{font-size:20px;margin-top:6px}
+  .pts small{color:#AEB8CE;font-size:13px}
+  .verdict-t{margin-top:10px;font-weight:700;color:var(--gold)}
+  .bars .row{display:grid;grid-template-columns:150px 1fr 64px;align-items:center;gap:10px;margin-bottom:9px;font-size:14px}
+  .bar{height:10px;background:var(--navy-soft);border-radius:6px;overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--navy2),var(--gold));border-radius:6px;transition:width .35s}
+  .bars .row b{text-align:right;color:var(--navy)}
+  .verdict{margin:6px 0 14px;padding:10px 14px;background:var(--gold-soft);border-left:4px solid var(--gold);border-radius:6px;font-size:14px}
+  .cmts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+  .cmt h4{margin:0 0 8px;font-size:14px;color:var(--navy)}
+  .cmt ul{margin:0;padding-left:18px;font-size:13.5px}
+  .cmt li{margin-bottom:6px}
+  .cmt.good li::marker{color:var(--green)}
+  .cmt.risk li::marker{color:var(--red)}
+  .cmt.adv li::marker{color:var(--gold-dark)}
+  .empty{color:var(--muted);font-size:13px}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .chartbox{position:relative;height:290px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{background:var(--navy);color:#fff;font-weight:500}
+  th:first-child,td:first-child{text-align:left}
+  tr:nth-child(even) td{background:#FAF8F3}
+  .neg{color:var(--red)}
+  .tscroll{overflow-x:auto}
+  .sens td,.sens th{text-align:center}
+  .sens td{font-weight:700;border:2px solid #fff}
+  .sens td.hit{background:var(--gold);color:var(--navy)}
+  .sens td.near{background:var(--gold-soft);color:var(--navy)}
+  .sens td.low{background:var(--navy-soft);color:var(--navy2)}
+  .sens td.loss{background:var(--red-soft);color:var(--red)}
+  .sens td.cur{outline:3px solid var(--navy);outline-offset:-3px}
+  .sens th.axis{background:var(--navy2)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+  .legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px;background:var(--c)}
+  details summary{cursor:pointer;font-weight:700;color:var(--navy);font-family:"Noto Serif TC",serif;font-size:17px}
+  details .body{font-size:14px;margin-top:10px}
+  details code{background:var(--navy-soft);padding:1px 5px;border-radius:4px;font-size:13px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 0 28px}
+  .nochart{display:none;color:var(--muted);font-size:13px}
+  @media (max-width:1000px){
+    .wrap{grid-template-columns:1fr;padding:16px}
+    aside{position:static;max-height:none}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .score{grid-template-columns:1fr}
+    .cmts,.charts{grid-template-columns:1fr}
+  }
+  @media (max-width:520px){
+    header{padding:20px 16px}
+    .kpis{grid-template-columns:1fr}
+    .bars .row{grid-template-columns:110px 1fr 56px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>LBO <span>報酬試算器</span></h1>
+  <p>Leveraged Buyout Return Calculator｜調整交易假設，即時檢視內部報酬率、資本結構變化與交易評分</p>
+</header>
+
+<div class="wrap">
+  <aside>
+    <h2>交易假設</h2>
+    <div class="scen">
+      <button data-s="cons">保守</button>
+      <button data-s="base" class="active">基準</button>
+      <button data-s="opt">樂觀</button>
+    </div>
+    <div class="scen-note">情境按鈕只調整利率、成長率、現金流轉換率與出場倍數，保留交易結構。</div>
+    <div id="inputs"></div>
+    <button class="reset" id="reset">重設為預設值</button>
+  </aside>
+
+  <main>
+    <section class="kpis" id="kpis"></section>
+
+    <section class="card">
+      <h2>交易評分與投資建議</h2>
+      <div class="sub">依報酬、風險與報酬品質五個面向評分（滿分 100），並自動產生評語</div>
+      <div class="score">
+        <div class="gradebox">
+          <div class="grade" id="grade">–</div>
+          <div class="pts"><span id="total">0</span> <small>/ 100</small></div>
+          <div class="verdict-t" id="verdictT"></div>
+        </div>
+        <div>
+          <div class="verdict" id="verdict"></div>
+          <div class="bars" id="bars"></div>
+        </div>
+      </div>
+      <div class="cmts">
+        <div class="cmt good"><h4>✓ 交易優勢</h4><ul id="good"></ul></div>
+        <div class="cmt risk"><h4>⚠ 主要風險</h4><ul id="risk"></ul></div>
+        <div class="cmt adv"><h4>➜ 具體建議</h4><ul id="adv"></ul></div>
+      </div>
+    </section>
+
+    <section class="charts">
+      <div class="card">
+        <h2>資本結構變化</h2>
+        <div class="sub">第 1 年起的股權價值以「當年 EBITDA × 出場倍數 − 淨債務」估算</div>
+        <div class="chartbox"><canvas id="capChart"></canvas></div>
+        <div class="nochart">圖表元件載入失敗，請確認網路連線。</div>
+      </div>
+      <div class="card">
+        <h2>報酬來源拆解</h2>
+        <div class="sub">股權增值 = EBITDA 成長 + 倍數擴張 + 去槓桿（百萬元）</div>
+        <div class="chartbox"><canvas id="bridgeChart"></canvas></div>
+        <div class="nochart">圖表元件載入失敗，請確認網路連線。</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>敏感度分析：IRR</h2>
+      <div class="sub">欄為進場倍數、列為出場倍數，其他假設不變；外框為目前設定</div>
+      <div class="tscroll"><table class="sens" id="sens"></table></div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="card">
+      <h2>年度償債明細</h2>
+      <div class="sub">單位：百萬元</div>
+      <div class="tscroll"><table id="sched"></table></div>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary>模型說明與評分標準</summary>
+        <div class="body">
+          <p><b>計算邏輯</b></p>
+          <ul>
+            <li>進場企業價值 = 進場 EBITDA × 進場倍數；債務 = 企業價值 × 舉債比例；股權投入 = 企業價值 − 債務。</li>
+            <li>每年 EBITDA 依成長率成長；利息 = 期初債務 × 利率；可用現金流 = EBITDA × 轉換率 − 利息。</li>
+            <li>可用現金流優先償還債務，債務還清後的剩餘現金累積於公司；若可用現金流為負，不足額以新增借款支應。</li>
+            <li>出場股權價值 = 出場年 EBITDA × 出場倍數 − 債務餘額 + 累積現金。</li>
+            <li>MOIC = 出場股權價值 ÷ 股權投入；因假設持有期間無股利分配，IRR = MOIC<sup>1/年限</sup> − 1。</li>
+          </ul>
+          <p><b>評分標準（滿分 100）</b></p>
+          <ul>
+            <li>IRR（35 分）：IRR 達「門檻 + 5 個百分點」得滿分，0% 以下得 0 分，中間線性給分。</li>
+            <li>MOIC（15 分）：2.5 倍得滿分，1.0 倍以下得 0 分。</li>
+            <li>進場槓桿（15 分）：債務 ÷ EBITDA 在 4 倍以下得滿分，7 倍以上得 0 分。</li>
+            <li>利息保障（15 分）：持有期間最低的 EBITDA ÷ 利息達 4 倍得滿分，1.5 倍以下得 0 分。</li>
+            <li>報酬品質（20 分）：倍數擴張占增值比例越低越好（12 分，占比 60% 以上得 0 分）；EBITDA 成長率 8% 以下得滿分，20% 以上得 0 分（8 分）。</li>
+            <li>上限規則：IRR 未達門檻時總分最高 69 分（最多 C 級）；出場股權價值歸零時直接評為 F。</li>
+            <li>等級：A ≥ 85、B 70–84、C 55–69、D 40–54、F &lt; 40。</li>
+          </ul>
+          <p>評分門檻為本工具為教學目的自行設定，並非業界統一標準。模型未考慮交易費用、稅負細節、管理層持股與分期債務條件，僅供學習使用，不構成投資建議。</p>
+        </div>
+      </details>
+    </section>
+  </main>
+</div>
+<footer>LBO 報酬試算器 v1.0｜教學用簡化模型，非投資建議</footer>
+
+<script>
+const INPUTS=[
+  {id:'ebitda',label:'進場 EBITDA',unit:'百萬元',min:10,max:1000,step:10,def:100,group:'交易結構',hint:'標的公司進場時的稅息折舊及攤銷前利益'},
+  {id:'entryMult',label:'進場倍數',unit:'x',min:4,max:20,step:0.5,def:9,group:'交易結構',hint:'企業價值 ÷ EBITDA'},
+  {id:'debtPct',label:'舉債比例',unit:'%',min:0,max:85,step:5,def:55,group:'交易結構',hint:'債務占進場企業價值的比例'},
+  {id:'rate',label:'債務利率',unit:'%',min:2,max:15,step:0.25,def:7,group:'交易結構'},
+  {id:'growth',label:'EBITDA 年成長率',unit:'%',min:-10,max:30,step:0.5,def:7,group:'營運假設'},
+  {id:'conv',label:'自由現金流轉換率',unit:'%',min:10,max:90,step:5,def:55,group:'營運假設',hint:'EBITDA 扣除稅、資本支出與營運資金變動後可用於償債的比例'},
+  {id:'years',label:'持有年限',unit:'年',min:3,max:7,step:1,def:5,group:'出場假設'},
+  {id:'exitMult',label:'出場倍數',unit:'x',min:4,max:20,step:0.5,def:9,group:'出場假設'},
+  {id:'hurdle',label:'目標 IRR（門檻）',unit:'%',min:10,max:35,step:1,def:20,group:'出場假設'}
+];
+const $=id=>document.getElementById(id);
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const f1=x=>x.toLocaleString('zh-TW',{minimumFractionDigits:1,maximumFractionDigits:1});
+const f0=x=>Math.round(x).toLocaleString('zh-TW');
+const pct=x=>(x*100).toFixed(1)+'%';
+const state={};
+INPUTS.forEach(c=>state[c.id]=c.def);
+
+function buildInputs(){
+  const box=$('inputs');let g='';
+  INPUTS.forEach(c=>{
+    if(c.group!==g){g=c.group;box.insertAdjacentHTML('beforeend',`<h3 class="grp">${g}</h3>`);}
+    box.insertAdjacentHTML('beforeend',`<div class="field">
+      <div class="frow"><label for="n_${c.id}">${c.label}</label>
+      <span class="numwrap"><input type="number" id="n_${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.def}"><span class="unit">${c.unit}</span></span></div>
+      <input type="range" id="r_${c.id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.def}" aria-label="${c.label}">
+      ${c.hint?`<div class="hint">${c.hint}</div>`:''}</div>`);
+  });
+  INPUTS.forEach(c=>{
+    const r=$('r_'+c.id),n=$('n_'+c.id);
+    r.addEventListener('input',()=>{state[c.id]=+r.value;n.value=r.value;clearScen();update();});
+    n.addEventListener('input',()=>{if(n.value==='')return;const v=+n.value;if(isNaN(v)||v<c.min||v>c.max)return;state[c.id]=v;r.value=v;clearScen();update();});
+    n.addEventListener('change',()=>{let v=+n.value;if(n.value===''||isNaN(v))v=state[c.id];v=clamp(v,c.min,c.max);if(c.id==='years')v=Math.round(v);state[c.id]=v;n.value=v;r.value=v;update();});
+  });
+}
+function setVals(o){
+  for(const k in o){const c=INPUTS.find(x=>x.id===k);const v=clamp(o[k],c.min,c.max);state[k]=v;$('r_'+k).value=v;$('n_'+k).value=v;}
+  update();
+}
+function clearScen(){document.querySelectorAll('.scen button').forEach(b=>b.classList.remove('active'));}
+
+/* ---------- 模型 ---------- */
+function model(p){
+  const n=Math.round(p.years);
+  const e0=p.ebitda, ev0=e0*p.entryMult, debt0=ev0*p.debtPct/100, eq0=ev0-debt0;
+  let e=e0, debt=debt0, cash=0, minCov=Infinity, shortYears=[];
+  const rows=[{t:0,ebitda:e0,interest:0,cf:0,pay:0,debt:debt0,cash:0}];
+  for(let t=1;t<=n;t++){
+    e=e*(1+p.growth/100);
+    const interest=debt*p.rate/100;
+    const cf=e*p.conv/100-interest;
+    let pay;
+    if(cf>=0){pay=Math.min(cf,debt);cash+=cf-pay;}
+    else{pay=cf;shortYears.push(t);}       // 負數代表新增借款
+    debt-=pay;
+    if(interest>0)minCov=Math.min(minCov,e/interest);
+    rows.push({t,ebitda:e,interest,cf,pay,debt,cash});
+  }
+  const evN=e*p.exitMult, eqN=evN-debt+cash;
+  const moic=eqN>0?eqN/eq0:0;
+  const irr=eqN>0?Math.pow(moic,1/n)-1:-1;
+  return {n,e0,ev0,debt0,eq0,eN:e,evN,debtN:debt,cashN:cash,eqN,moic,irr,minCov,shortYears,rows,
+    lev0:debt0/e0, levN:Math.max(0,debt-cash)/e,
+    bGrowth:(e-e0)*p.entryMult, bMult:(p.exitMult-p.entryMult)*e, bDelev:debt0-debt+cash};
+}
+const irrWith=(p,o)=>model(Object.assign({},p,o)).irr;
+
+function maxEntryFor(p){
+  const h=p.hurdle/100;
+  if(irrWith(p,{entryMult:1})<h)return null;
+  if(irrWith(p,{entryMult:30})>=h)return 30;
+  let lo=1,hi=30;
+  for(let i=0;i<50;i++){const m=(lo+hi)/2;if(irrWith(p,{entryMult:m})>=h)lo=m;else hi=m;}
+  return lo;
+}
+
+/* ---------- 評分 ---------- */
+function score(p,r){
+  const h=p.hurdle/100;
+  const pos=Math.max(0,r.bGrowth)+Math.max(0,r.bMult)+Math.max(0,r.bDelev);
+  const multShare=pos>0?Math.max(0,r.bMult)/pos:0;
+  const gain=r.eqN>r.eq0;
+  const parts=[
+    {k:'IRR',max:35,v:clamp(r.irr/(h+0.05),0,1)*35},
+    {k:'MOIC',max:15,v:clamp((r.moic-1)/1.5,0,1)*15},
+    {k:'進場槓桿',max:15,v:clamp((7-r.lev0)/3,0,1)*15},
+    {k:'利息保障',max:15,v:isFinite(r.minCov)?clamp((r.minCov-1.5)/2.5,0,1)*15:15},
+    {k:'報酬品質',max:20,v:(gain?clamp(1-multShare/0.6,0,1)*12:0)+clamp((20-p.growth)/12,0,1)*8}
+  ];
+  let total=parts.reduce((s,x)=>s+x.v,0);
+  let capped=false;
+  if(r.irr<h&&total>69){total=69;capped=true;}
+  if(r.eqN<=0)total=Math.min(total,20);
+  total=Math.round(total);
+  let g;
+  if(r.eqN<=0)g='F';
+  else g=total>=85?'A':total>=70?'B':total>=55?'C':total>=40?'D':'F';
+  return {parts,total,grade:g,capped,multShare};
+}
+const VERDICT={
+  A:['強烈建議推進','報酬與風險結構俱佳，可進入下一階段盡職調查與條件協商。'],
+  B:['建議推進（附條件）','整體可行，但需針對下列風險取得緩解措施後再推進。'],
+  C:['審慎評估','報酬或風險未達理想，建議重新議價或調整資本結構後再評估。'],
+  D:['不建議投資','在目前假設下，報酬不足以補償所承擔的風險。'],
+  F:['否決','在目前假設下，交易無法創造合理報酬。']
+};
+
+function comments(p,r,s){
+  const h=p.hurdle/100, good=[], risk=[], adv=[];
+  // 優勢
+  if(r.irr>=h)good.push(`IRR ${pct(r.irr)} 高於門檻 ${p.hurdle}%，符合基金報酬要求。`);
+  if(r.moic>=2)good.push(`MOIC 達 ${r.moic.toFixed(2)} 倍，持有期間股權價值翻倍以上。`);
+  if(r.lev0<=5&&p.debtPct>0)good.push(`進場槓桿 ${r.lev0.toFixed(1)} 倍 EBITDA，債務負擔相對可控。`);
+  if(isFinite(r.minCov)&&r.minCov>=3)good.push(`最低利息保障倍數 ${r.minCov.toFixed(1)} 倍，償息緩衝充足。`);
+  if(r.eqN>r.eq0&&s.multShare<=0.3)good.push(`報酬主要來自營運成長與去槓桿（倍數擴張僅占 ${pct(s.multShare)}），報酬品質較佳。`);
+  if(r.debt0>0&&r.debtN<=r.debt0*0.6)good.push(`持有期間償還 ${pct(1-r.debtN/r.debt0)} 的收購債務，去槓桿效果明顯。`);
+  // 風險
+  if(r.eqN<=0)risk.push('出場時債務超過企業價值，股權價值歸零。');
+  else if(r.irr<h)risk.push(`IRR ${pct(r.irr)} 未達門檻 ${p.hurdle}%，差距 ${((h-r.irr)*100).toFixed(1)} 個百分點。`);
+  if(r.lev0>6)risk.push(`進場槓桿達 ${r.lev0.toFixed(1)} 倍 EBITDA，對營運波動的承受度低。`);
+  if(isFinite(r.minCov)&&r.minCov<2)risk.push(`最低利息保障倍數僅 ${r.minCov.toFixed(1)} 倍，償債壓力大。`);
+  if(r.shortYears.length)risk.push(`第 ${r.shortYears.join('、')} 年可用現金流不足支付利息，需額外借款。`);
+  if(r.eqN>r.eq0&&s.multShare>0.5)risk.push(`${pct(s.multShare)} 的增值來自倍數擴張，高度依賴出場時的市場評價。`);
+  else if(p.exitMult>p.entryMult)risk.push(`假設出場倍數（${p.exitMult}x）高於進場倍數（${p.entryMult}x），隱含市場評價上升。`);
+  if(p.growth>12)risk.push(`EBITDA 年成長率 ${p.growth}% 偏樂觀，需有具體成長動能支持。`);
+  if(p.growth<0)risk.push('EBITDA 呈衰退，出場價值與償債能力同步下降。');
+  // 建議
+  const me=maxEntryFor(p);
+  if(me===null)adv.push('即使大幅壓低進場倍數仍無法達到門檻，建議重新檢視營運與出場假設。');
+  else if(me>=30)adv.push('進場倍數在合理範圍內皆可達門檻報酬。');
+  else if(r.irr>=h)adv.push(`在其他假設不變下，進場倍數最高可承受至 ${me.toFixed(1)} 倍仍達門檻，議價空間約 ${(me-p.entryMult).toFixed(1)} 倍。`);
+  else adv.push(`建議將進場倍數議價至 ${me.toFixed(1)} 倍以下（目前 ${p.entryMult} 倍），IRR 才能達到 ${p.hurdle}% 門檻。`);
+  if(p.exitMult>p.entryMult){
+    const irrFlat=irrWith(p,{exitMult:p.entryMult});
+    adv.push(`保守測試：若出場倍數等於進場倍數（${p.entryMult}x），IRR 為 ${irrFlat<=-1?'股權歸零':pct(irrFlat)}。`);
+  }
+  if(r.lev0>6){
+    const d=Math.floor(5/p.entryMult*100/5)*5;
+    const ir=irrWith(p,{debtPct:d});
+    adv.push(`建議將舉債比例降至 ${d}%（約 5 倍 EBITDA），此時 IRR 為 ${ir<=-1?'股權歸零':pct(ir)}，風險較低。`);
+  }
+  if(isFinite(r.minCov)&&r.minCov<2)adv.push('建議爭取較低利率、延長還款期間或降低舉債，以提高利息保障倍數。');
+  if(p.growth>12)adv.push('建議透過商業盡職調查驗證市場規模與成長動能，並以較低成長率進行壓力測試。');
+  if(p.conv<40)adv.push('現金流轉換率偏低，建議檢視資本支出與營運資金管理，提升可償債現金。');
+  adv.push(VERDICT[s.grade][1]);
+  return {good,risk,adv};
+}
+
+/* ---------- 圖表 ---------- */
+let capChart=null, bridgeChart=null;
+const chartOk=typeof Chart!=='undefined';
+if(chartOk){
+  Chart.defaults.font.family='"Noto Sans TC","Microsoft JhengHei",sans-serif';
+  Chart.defaults.color='#4B5563';
+  capChart=new Chart($('capChart'),{type:'bar',data:{labels:[],datasets:[
+    {label:'債務餘額',data:[],backgroundColor:'#1B2A4A',borderRadius:4},
+    {label:'股權價值',data:[],backgroundColor:'#C9A84C',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,title:{display:true,text:'百萬元'}}},
+      plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}：${f1(c.raw)}`}}}}});
+  bridgeChart=new Chart($('bridgeChart'),{type:'bar',data:{labels:['股權投入','EBITDA 成長','倍數擴張','去槓桿','出場股權價值'],datasets:[{data:[],backgroundColor:[],borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>{const d=c.raw[1]-c.raw[0];return (c.dataIndex===0||c.dataIndex===4)?`${f1(c.raw[1])}`:`${d>=0?'+':''}${f1(d)}`;}}}},
+      scales:{x:{grid:{display:false}},y:{title:{display:true,text:'百萬元'}}}}});
+}else{
+  document.querySelectorAll('.nochart').forEach(x=>x.style.display='block');
+  document.querySelectorAll('.chartbox').forEach(x=>x.style.display='none');
+}
+
+/* ---------- 畫面更新 ---------- */
+function update(){
+  const p={...state}, r=model(p), s=score(p,r), h=p.hurdle/100;
+  // KPI
+  $('kpis').innerHTML=`
+    <div class="kpi"><div class="k">進場企業價值</div><div class="v">${f0(r.ev0)}</div><div class="s">${f0(r.e0)} × ${p.entryMult}x（百萬元）</div></div>
+    <div class="kpi"><div class="k">股權投入 / 收購債務</div><div class="v">${f0(r.eq0)}</div><div class="s">債務 ${f0(r.debt0)}（百萬元）</div></div>
+    <div class="kpi hl"><div class="k">內部報酬率 IRR</div><div class="v">${r.eqN<=0?'−100%':pct(r.irr)}</div><div class="s">門檻 ${p.hurdle}% <span class="badge ${r.irr>=h?'ok':'no'}">${r.irr>=h?'達標':'未達標'}</span></div></div>
+    <div class="kpi hl"><div class="k">投資倍數 MOIC</div><div class="v">${r.moic.toFixed(2)}x</div><div class="s">出場股權價值 ${f0(Math.max(0,r.eqN))}（百萬元）</div></div>
+    <div class="kpi"><div class="k">進場槓桿</div><div class="v">${r.lev0.toFixed(1)}x</div><div class="s">出場淨槓桿 ${r.levN.toFixed(1)}x EBITDA</div></div>
+    <div class="kpi"><div class="k">最低利息保障倍數</div><div class="v">${isFinite(r.minCov)?r.minCov.toFixed(1)+'x':'無債務'}</div><div class="s">EBITDA ÷ 利息費用</div></div>`;
+  // 評分
+  $('grade').textContent=s.grade;
+  $('total').textContent=s.total;
+  $('verdictT').textContent=VERDICT[s.grade][0];
+  $('verdict').innerHTML=`<b>${VERDICT[s.grade][0]}：</b>${VERDICT[s.grade][1]}${s.capped?'（IRR 未達門檻，總分上限為 69 分）':''}`;
+  $('bars').innerHTML=s.parts.map(x=>`<div class="row"><span>${x.k}</span><div class="bar"><i style="width:${x.v/x.max*100}%"></i></div><b>${x.v.toFixed(1)}/${x.max}</b></div>`).join('');
+  const c=comments(p,r,s);
+  const li=a=>a.length?a.map(x=>`<li>${x}</li>`).join(''):'<li class="empty">無</li>';
+  $('good').innerHTML=li(c.good);$('risk').innerHTML=li(c.risk);$('adv').innerHTML=li(c.adv);
+  // 圖表
+  if(chartOk){
+    capChart.data.labels=r.rows.map(x=>`第${x.t}年`);
+    capChart.data.datasets[0].data=r.rows.map(x=>x.debt);
+    capChart.data.datasets[1].data=r.rows.map(x=>x.t===0?r.eq0:Math.max(0,x.ebitda*p.exitMult-x.debt+x.cash));
+    capChart.update();
+    const a=r.eq0,b=a+r.bGrowth,cc=b+r.bMult,d=cc+r.bDelev;
+    bridgeChart.data.datasets[0].data=[[0,a],[a,b],[b,cc],[cc,d],[0,Math.max(0,r.eqN)]];
+    bridgeChart.data.datasets[0].backgroundColor=['#1B2A4A',r.bGrowth>=0?'#C9A84C':'#B04A3A',r.bMult>=0?'#C9A84C':'#B04A3A',r.bDelev>=0?'#C9A84C':'#B04A3A','#2C3E66'];
+    bridgeChart.update();
+  }
+  // 敏感度
+  const offs=[-2,-1,0,1,2];
+  const ents=offs.map(o=>p.entryMult+o).filter(x=>x>=1);
+  const exs=offs.map(o=>p.exitMult+o).filter(x=>x>=1);
+  let html=`<tr><th class="axis">出場 ＼ 進場</th>${ents.map(x=>`<th>${x.toFixed(1)}x</th>`).join('')}</tr>`;
+  exs.forEach(ex=>{
+    html+=`<tr><th class="axis">${ex.toFixed(1)}x</th>`;
+    ents.forEach(en=>{
+      const v=irrWith(p,{entryMult:en,exitMult:ex});
+      const cls=v>=h?'hit':v>=h*0.75?'near':v>=0?'low':'loss';
+      const cur=(en===p.entryMult&&ex===p.exitMult)?' cur':'';
+      html+=`<td class="${cls}${cur}">${v<=-1?'−100%':pct(v)}</td>`;
+    });
+    html+='</tr>';
+  });
+  $('sens').innerHTML=html;
+  $('legend').innerHTML=`<span style="--c:#C9A84C">≥ 門檻 ${p.hurdle}%</span><span style="--c:#F3EAD0">門檻的 75%–100%</span><span style="--c:#E6EAF2">0% – 門檻的 75%</span><span style="--c:#F6E1DC">虧損</span>`;
+  // 明細表
+  let t=`<tr><th>年度</th><th>EBITDA</th><th>利息費用</th><th>可用現金流</th><th>償還債務</th><th>期末債務</th><th>累積現金</th></tr>`;
+  r.rows.forEach(x=>{
+    const n=v=>`<span class="${v<0?'neg':''}">${v<0?'('+f1(-v)+')':f1(v)}</span>`;
+    t+=x.t===0?`<tr><td>第 0 年（進場）</td><td>${f1(x.ebitda)}</td><td>–</td><td>–</td><td>–</td><td>${f1(x.debt)}</td><td>–</td></tr>`
+      :`<tr><td>第 ${x.t} 年</td><td>${f1(x.ebitda)}</td><td>${f1(x.interest)}</td><td>${n(x.cf)}</td><td>${n(x.pay)}</td><td>${f1(x.debt)}</td><td>${f1(x.cash)}</td></tr>`;
+  });
+  t+=`<tr><td><b>出場</b></td><td colspan="4" style="text-align:left">企業價值 ${f1(r.evN)} − 債務 ${f1(r.debtN)} + 現金 ${f1(r.cashN)}</td><td colspan="2"><b>股權價值 ${f1(r.eqN)}</b></td></tr>`;
+  $('sched').innerHTML=t;
+}
+
+/* ---------- 情境 ---------- */
+const SCEN={
+  cons:p=>({rate:9,growth:3,conv:40,exitMult:p.entryMult-1}),
+  base:p=>({rate:7,growth:7,conv:55,exitMult:p.entryMult}),
+  opt:p=>({rate:6,growth:11,conv:65,exitMult:p.entryMult+1.5})
+};
+document.querySelectorAll('.scen button').forEach(b=>b.addEventListener('click',()=>{
+  setVals(SCEN[b.dataset.s](state));clearScen();b.classList.add('active');
+}));
+$('reset').addEventListener('click',()=>{const o={};INPUTS.forEach(c=>o[c.id]=c.def);setVals(o);clearScen();document.querySelector('[data-s=base]').classList.add('active');});
+
+buildInputs();
+update();
+</script>
+</body>
+</html>
